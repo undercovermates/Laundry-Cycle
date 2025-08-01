@@ -1,0 +1,322 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Laundry Timer - Delay Calculator</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .lucide {
+            width: 24px;
+            height: 24px;
+            stroke: currentColor;
+            stroke-width: 2;
+            fill: none;
+            stroke-linecap: round;
+            stroke-linejoin: round;
+        }
+    </style>
+</head>
+<body>
+    <div id="app"></div>
+
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
+    <script type="text/babel">
+        const { useState, useEffect } = React;
+
+        // Simple Lucide icons as SVG components
+        const Clock = () => (
+            <svg className="lucide" viewBox="0 0 24 24">
+                <circle cx="12" cy="12" r="10"/>
+                <polyline points="12,6 12,12 16,14"/>
+            </svg>
+        );
+
+        const Timer = () => (
+            <svg className="lucide" viewBox="0 0 24 24">
+                <circle cx="12" cy="12" r="7"/>
+                <polyline points="12,9 12,12 13.5,13.5"/>
+                <path d="m16.51 17.35-.35 3.83a2 2 0 0 1-2 1.82H9.83a2 2 0 0 1-2-1.82l-.35-3.83m.01-10.7.35-3.83A2 2 0 0 1 9.83 1h4.35a2 2 0 0 1 2 1.82l.35 3.83"/>
+            </svg>
+        );
+
+        const Zap = () => (
+            <svg className="lucide" viewBox="0 0 24 24">
+                <polygon points="13,2 3,14 12,14 11,22 21,10 12,10 13,2"/>
+            </svg>
+        );
+
+        const WashingDelayCalculator = () => {
+            const [currentTime, setCurrentTime] = useState('');
+            const [endTime, setEndTime] = useState('');
+            const [cycleDuration, setCycleDuration] = useState('60');
+            const [calculatedDelay, setCalculatedDelay] = useState(null);
+            const [selectedDelay, setSelectedDelay] = useState(null);
+            const [actualEndTime, setActualEndTime] = useState('');
+
+            // Preset delay options in minutes: 30min, 1h, then every hour up to 24h
+            const delayOptions = [
+                { label: '30 min', value: 30 },
+                { label: '1 hour', value: 60 },
+                { label: '2 hours', value: 120 },
+                { label: '3 hours', value: 180 },
+                { label: '4 hours', value: 240 },
+                { label: '5 hours', value: 300 },
+                { label: '6 hours', value: 360 },
+                { label: '7 hours', value: 420 },
+                { label: '8 hours', value: 480 },
+                { label: '9 hours', value: 540 },
+                { label: '10 hours', value: 600 },
+                { label: '11 hours', value: 660 },
+                { label: '12 hours', value: 720 },
+                { label: '13 hours', value: 780 },
+                { label: '14 hours', value: 840 },
+                { label: '15 hours', value: 900 },
+                { label: '16 hours', value: 960 },
+                { label: '17 hours', value: 1020 },
+                { label: '18 hours', value: 1080 },
+                { label: '19 hours', value: 1140 },
+                { label: '20 hours', value: 1200 },
+                { label: '21 hours', value: 1260 },
+                { label: '22 hours', value: 1320 },
+                { label: '23 hours', value: 1380 },
+                { label: '24 hours', value: 1440 }
+            ];
+
+            // Update current time every minute
+            useEffect(() => {
+                const updateCurrentTime = () => {
+                    const now = new Date();
+                    const timeString = now.toTimeString().slice(0, 5);
+                    setCurrentTime(timeString);
+                };
+
+                updateCurrentTime();
+                const interval = setInterval(updateCurrentTime, 60000);
+                return () => clearInterval(interval);
+            }, []);
+
+            const calculateDelay = () => {
+                if (!endTime || !cycleDuration) return;
+
+                const now = new Date();
+                const [endHour, endMinute] = endTime.split(':').map(Number);
+                
+                // Create end time for today first
+                let endDateTime = new Date();
+                endDateTime.setHours(endHour, endMinute, 0, 0);
+                
+                // Calculate when program should start (end time - cycle duration)
+                const startDateTime = new Date(endDateTime.getTime() - (parseInt(cycleDuration) * 60000));
+                
+                // If end time is before now OR start time is before now, assume it's for tomorrow
+                if (endDateTime <= now || startDateTime <= now) {
+                    endDateTime.setDate(endDateTime.getDate() + 1);
+                    startDateTime.setDate(startDateTime.getDate() + 1);
+                }
+                
+                // Calculate delay needed (start time - current time)
+                const delayNeeded = Math.max(0, Math.floor((startDateTime.getTime() - now.getTime()) / 60000));
+                
+                setCalculatedDelay(delayNeeded);
+
+                // Find the best preset delay option that won't exceed the finish time
+                let bestDelay = null;
+                
+                // Sort delays in descending order to find the longest delay that still finishes on time
+                const sortedDelays = [...delayOptions].sort((a, b) => b.value - a.value);
+                
+                for (const option of sortedDelays) {
+                    const testStart = new Date(now.getTime() + (option.value * 60000));
+                    const testEnd = new Date(testStart.getTime() + (parseInt(cycleDuration) * 60000));
+                    
+                    // If this delay would finish at or before the target time, it's valid
+                    if (testEnd <= endDateTime) {
+                        bestDelay = option;
+                        break;
+                    }
+                }
+
+                if (bestDelay) {
+                    setSelectedDelay(bestDelay);
+                    
+                    // Calculate actual end time with selected delay
+                    const actualStart = new Date(now.getTime() + (bestDelay.value * 60000));
+                    const actualEnd = new Date(actualStart.getTime() + (parseInt(cycleDuration) * 60000));
+                    
+                    // Format the end time with day indicator if it's tomorrow
+                    const isEndingTomorrow = actualEnd.getDate() !== now.getDate();
+                    const timeString = actualEnd.toTimeString().slice(0, 5);
+                    setActualEndTime(isEndingTomorrow ? `${timeString} (tomorrow)` : timeString);
+                } else {
+                    setSelectedDelay(null);
+                    setActualEndTime('');
+                }
+            };
+
+            const formatTime = (minutes) => {
+                if (minutes < 60) {
+                    return `${minutes} minutes`;
+                } else if (minutes === 60) {
+                    return '1 hour';
+                } else if (minutes < 1440) {
+                    const hours = Math.floor(minutes / 60);
+                    const mins = minutes % 60;
+                    return mins > 0 ? `${hours}h ${mins}m` : `${hours} hours`;
+                } else {
+                    return '24 hours';
+                }
+            };
+
+            const getStatusColor = () => {
+                if (!calculatedDelay) return 'text-gray-600';
+                if (calculatedDelay === 0) return 'text-green-600';
+                if (calculatedDelay <= 30) return 'text-yellow-600';
+                return 'text-blue-600';
+            };
+
+            return (
+                <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 p-4">
+                    <div className="max-w-md mx-auto bg-white rounded-2xl shadow-xl p-6">
+                        <div className="text-center mb-6">
+                            <div className="bg-blue-100 p-3 rounded-full w-16 h-16 mx-auto mb-3 flex items-center justify-center">
+                                <Timer />
+                            </div>
+                            <h1 className="text-2xl font-bold text-gray-800">Laundry Timer</h1>
+                            <p className="text-gray-600 text-sm mt-1">Calculate delays for wash & dry programs</p>
+                        </div>
+
+                        <div className="space-y-4">
+                            {/* Current Time Display */}
+                            <div className="bg-gray-50 p-3 rounded-lg flex items-center justify-center">
+                                <Clock />
+                                <span className="text-lg font-mono text-gray-800 ml-2">Current Time: {currentTime}</span>
+                            </div>
+
+                            {/* End Time Input */}
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-2">
+                                    When should the program finish?
+                                </label>
+                                <input
+                                    type="time"
+                                    value={endTime}
+                                    onChange={(e) => setEndTime(e.target.value)}
+                                    className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-lg"
+                                />
+                                <p className="text-xs text-gray-500 mt-1">
+                                    If time is before now, it assumes tomorrow
+                                </p>
+                            </div>
+
+                            {/* Cycle Duration Input */}
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-2">
+                                    Program duration (minutes)
+                                </label>
+                                <select
+                                    value={cycleDuration}
+                                    onChange={(e) => setCycleDuration(e.target.value)}
+                                    className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                >
+                                    <option value="30">30 min (Quick wash)</option>
+                                    <option value="45">45 min</option>
+                                    <option value="60">60 min (Standard wash)</option>
+                                    <option value="90">90 min (Cotton)</option>
+                                    <option value="120">2 hours (Heavy duty)</option>
+                                    <option value="150">2.5 hours</option>
+                                    <option value="180">3 hours (Wash + Quick dry)</option>
+                                    <option value="210">3.5 hours</option>
+                                    <option value="240">4 hours (Wash + Full dry)</option>
+                                    <option value="270">4.5 hours</option>
+                                    <option value="300">5 hours (Heavy + Full dry)</option>
+                                    <option value="360">6 hours (Delicate + Air dry)</option>
+                                    <option value="420">7 hours</option>
+                                    <option value="480">8 hours (Extra care cycle)</option>
+                                </select>
+                            </div>
+
+                            {/* Calculate Button */}
+                            <button
+                                onClick={calculateDelay}
+                                className="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-3 px-4 rounded-lg transition-colors flex items-center justify-center"
+                            >
+                                <Zap />
+                                <span className="ml-2">Calculate Delay</span>
+                            </button>
+
+                            {/* Results */}
+                            {calculatedDelay !== null && (
+                                <div className="mt-6 space-y-4">
+                                    <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
+                                        <h3 className="font-medium text-blue-900 mb-2">Calculation Results</h3>
+                                        <p className={`text-sm ${getStatusColor()}`}>
+                                            <strong>Delay needed:</strong> {formatTime(calculatedDelay)}
+                                        </p>
+                                        
+                                        {selectedDelay ? (
+                                            <div className="mt-3 p-3 bg-green-50 border border-green-200 rounded-lg">
+                                                <p className="text-green-800 font-medium">
+                                                    ✓ Set delay to: <span className="text-lg">{selectedDelay.label}</span>
+                                                </p>
+                                                <p className="text-green-700 text-sm mt-1">
+                                                    Program will finish at <strong>{actualEndTime}</strong>
+                                                    {calculatedDelay > selectedDelay.value && (
+                                                        <span className="text-orange-600"> (finishes earlier than requested)</span>
+                                                    )}
+                                                </p>
+                                            </div>
+                                        ) : calculatedDelay > 1440 ? (
+                                            <div className="mt-3 p-3 bg-red-50 border border-red-200 rounded-lg">
+                                                <p className="text-red-800 text-sm">
+                                                    ⚠️ Cannot delay enough to meet your finish time. Consider starting tomorrow.
+                                                </p>
+                                            </div>
+                                        ) : calculatedDelay === 0 ? (
+                                            <div className="mt-3 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
+                                                <p className="text-yellow-800 text-sm">
+                                                    ℹ️ Start your program now - no delay needed!
+                                                </p>
+                                            </div>
+                                        ) : (
+                                            <div className="mt-3 p-3 bg-red-50 border border-red-200 rounded-lg">
+                                                <p className="text-red-800 text-sm">
+                                                    ⚠️ No available delay setting can meet your finish time without exceeding it.
+                                                </p>
+                                            </div>
+                                        )}
+                                    </div>
+
+                                    {/* Available Delays */}
+                                    <div className="bg-gray-50 p-4 rounded-lg">
+                                        <h4 className="font-medium text-gray-700 mb-2">Available delay settings:</h4>
+                                        <div className="grid grid-cols-4 gap-1 text-xs">
+                                            {delayOptions.map((option, index) => (
+                                                <div
+                                                    key={index}
+                                                    className={`p-1 rounded text-center ${
+                                                        selectedDelay && selectedDelay.value === option.value
+                                                            ? 'bg-blue-200 text-blue-800 font-medium'
+                                                            : 'bg-white text-gray-600'
+                                                    }`}
+                                                >
+                                                    {option.label}
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                </div>
+            );
+        };
+
+        ReactDOM.render(<WashingDelayCalculator />, document.getElementById('app'));
+    </script>
+</body>
+</html>
