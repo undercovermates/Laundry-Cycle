@@ -545,10 +545,8 @@
         updateCurrentTime();
         setInterval(updateCurrentTime, 1000);
 
-        // Set default end time
-        const defaultEndTime = new Date();
-        defaultEndTime.setHours(defaultEndTime.getHours() + 4);
-        document.getElementById('endTime').value = defaultEndTime.toTimeString().slice(0, 5);
+        // Set default end time to 5:30 AM
+        document.getElementById('endTime').value = '05:30';
     </script>
 </body>
 </html>
