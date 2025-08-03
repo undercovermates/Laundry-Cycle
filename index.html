@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AEG L7WBG741R Delay Timer Calculator</title>
+    <title>Delay Calculator</title>
     <style>
         * {
             margin: 0;
@@ -277,7 +277,7 @@
 <body>
     <div class="container">
         <div class="header">
-            <h1>AEG L7WBG741R Delay Timer</h1>
+            <h1>Delay Calculator</h1>
         </div>
         
         <div class="content">
@@ -304,7 +304,7 @@
             <button class="calculate-btn" onclick="calculateDelay()">Calculate Delay Time</button>
 
             <div class="result" id="result">
-                <h3>Set Your Machine To:</h3>
+                <h3>Set Your Delay To:</h3>
                 <div class="delay-time" id="delayTime">--</div>
                 <div class="result-details" id="resultDetails"></div>
                 
@@ -435,7 +435,7 @@
             }
 
             if (requiredDelayMinutes > 1200) {
-                showError('The delay would exceed 20 hours (machine maximum). Please select an earlier time.');
+                showError('The delay would exceed 20 hours maximum. Please select an earlier time.');
                 return;
             }
 
